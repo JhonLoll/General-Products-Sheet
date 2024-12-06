@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver import ActionChains
 from time import sleep
 import os.path
 
@@ -28,13 +29,13 @@ def chrome_driver(sheets_path):
     # ===========================================
     # Campo de login
     login = driver.find_element(By.XPATH, "//input[@data-cy='login-usuario-input-field']")
-    login.send_keys('jhonh01')
+    login.send_keys(os.getenv('user_login_vf'))
 
     sleep(1)
 
     # Campo de senha
     passw = driver.find_element(By.XPATH, "//input[@data-cy='login-senha-input-field']")
-    passw.send_keys('Jhonbruno12@')
+    passw.send_keys(os.getenv('pass_login_vf'))
 
     sleep(1)
 
@@ -135,10 +136,99 @@ def chrome_driver(sheets_path):
     )
     gerar.click()
 
-    # Verifica se o arquivo já está na pasta para só aí, parar a execução
-    while True:
-        if os.path.isfile('./sheets/relatorioSaldoEstoque.xls'):
-            driver.quit()
-            break
+    loop = True
+    # Para a automação quando o arquivo é criado
+    while loop:
+        for arquivo in os.listdir(sheets_path):
+            nome, extesion = os.path.splitext(arquivo)
+            if extesion == ".xls":
+                driver.quit()
+                loop = False
 
+    driver.quit()
+
+def vd_driver(sheets_path, login, passw):
+    
+    acess_login = login
+    pass_login = passw
+
+    # Inicializa o navegador Chrome
+    options = webdriver.ChromeOptions()
+
+    options.add_argument("--start-maximized")
+    options.add_experimental_option("prefs",{
+        "download.default_directory": rf'{sheets_path}',
+        "download.prompt_for_download": False,
+        "download.directory_upgrade": True,
+        "safebrowsing.enabled": True
+    })
+
+    driver = webdriver.Chrome(options=options)
+
+    driver.get("https://sgi.e-boticario.com.br/Paginas/Acesso/Entrar.aspx")
+
+    sleep(5)
+
+    # Insere o login do usuario
+    driver.find_element(By.XPATH, "//input[@id='username']").send_keys(acess_login) #Usuario
+    driver.find_element(By.XPATH, "//input[@id='password']").send_keys(pass_login) #Senha
+
+    # Clica no botão de login
+    driver.find_element(By.XPATH, "//span[@class='mdc-button__ripple']").click()
+
+    sleep(5)
+
+    # Seleciona o menu Logistica
+    driver.find_element(By.XPATH, "//a[@data-target='#submenu-cod-7']").click()
+
+    sleep(1)
+
+    # Seleciona o menu logistica interna
+    driver.find_element(By.XPATH, "//a[@href='javascript: void(607);']").click()
+
+    sleep(2)
+
+    # Seleciona o menu Cadastro de Linhas de Separação
+    elemento_ul = WebDriverWait(driver, 30).until(
+        EC.element_to_be_clickable((By.XPATH, "//li[@class='has-sub-itens seta-lista submenu-select']/ul"))
+    )
+    elemento_ul.find_element(By.XPATH, ".//a[text()='Cadastro de Linhas de Separação']").click()
+
+    sleep(2)
+
+    # logistica_menu = driver.find_element(By.XPATH, "//ul[@style='left: -292px; display: block;']")
+    # menus = logistica_menu.find_elements(By.TAG_NAME, "li")
+    # menus[3].click()
+
+    # sleep(5)
+
+    # Clica no botão de pesquisa da linha de separação
+    driver.find_element(By.XPATH, "//a[@id='ContentPlaceHolder1_buscaSeparacao_buscarButton_btn']").click()
+
+    sleep(2)
+
+    # Coloca o mouse encima do texto
+    hover = driver.find_element(By.XPATH, "//div[@id='ContentPlaceHolder1_buscaSeparacao_linhasSeparacaoGrid_MenuContextoGrid1_0_gridButton_0']")
+
+    ActionChains(driver).move_to_element(hover).perform()
+
+    # Clica na opção de editar
+    driver.find_element(By.XPATH, "//a[@id='ContentPlaceHolder1_buscaSeparacao_linhasSeparacaoGrid_MenuContextoGrid1_0_editarButton_0_btn_0']").click()
+
+    sleep(5)
+
+    # Clica no botão de exportar 
+    driver.find_element(By.XPATH, "//a[@id='ContentPlaceHolder1_exportarBotao_btn']").click()
+
+    loop = True
+    # Para a automação quando o arquivo é criado
+    while loop:
+        for arquivo in os.listdir(sheets_path):
+            nome, extesion = os.path.splitext(arquivo)
+            if extesion == ".xls":
+                driver.quit()
+                loop = False
+
+    driver.quit()
+    
 
